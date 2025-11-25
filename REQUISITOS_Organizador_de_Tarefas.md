@@ -171,6 +171,7 @@ model Type {
 
 enum TaskStatus {
   TODO
+  IN_PROGRESS
   DONE
 }
 ```
@@ -192,3 +193,94 @@ RNF3 — Usabilidade
 RNF4 — Acessibilidade
 
 - Elementos de formulários com labels, contraste suficiente, navegação por teclado básica.
+
+## 10. Diagrama de Transição de Estados — `Task` (Tarefa)
+
+O diagrama abaixo descreve o ciclo de vida de um objeto `Task` em resposta a eventos do sistema e ações do usuário. O atributo de interesse é `status`, que possui múltiplos estados possíveis e determina o comportamento do objeto.
+
+Descrição rápida:
+
+- Estado inicial: tarefa criada entra no estado `TODO`.
+- Estados principais: `TODO`, `IN_PROGRESS`, `DONE`, `ARCHIVED`.
+- Estado final/arquivado: `ARCHIVED` representa que a tarefa foi retirada do fluxo ativo.
+
+Transições incluem eventos, condições de guarda e ações realizadas na transição.
+
+Diagrama (Mermaid - State Diagram):
+
+```mermaid
+stateDiagram-v2
+  [*] --> TODO
+
+  TODO --> IN_PROGRESS : iniciarTarefa / entry: registrarInicio()
+  IN_PROGRESS --> TODO : pausarTarefa / exit: registrarPausa()
+
+  IN_PROGRESS --> DONE : passoConcluido [todosPassosConcluidos] / marcarComoConcluida()
+  TODO --> DONE : marcarComoFeita [semPassos] / marcarComoConcluida()
+
+  DONE --> ARCHIVED : arquivar / removerDaLista()
+  ARCHIVED --> [*]
+
+  state IN_PROGRESS {
+    entry: iniciarContador()
+    exit: pararContador()
+  }
+
+  %% Exemplo de transição com condição de guarda e ação
+  %% evento [condição] / ação
+```
+
+Explicações:
+
+- `iniciarTarefa`: evento disparado quando o usuário inicia o trabalho na tarefa; executa `registrarInicio()` como ação de entrada.
+- `pausarTarefa`: permite voltar de `IN_PROGRESS` para `TODO` (por exemplo, suspender a execução).
+- `passoConcluido`: evento que ocorre quando um passo da tarefa é marcado como concluído; a transição para `DONE` só ocorre se a condição `[todosPassosConcluidos]` for verdadeira.
+- `marcarComoFeita`: evento direto para marcar uma tarefa como concluída se ela não possui passos.
+- `arquivar`: move a tarefa para `ARCHIVED`, pondo-a fora do fluxo ativo; `ARCHIVED` é tratado como um estado final/terminal.
+
+Observações sobre guardas e ações:
+
+- Guardas como `[todosPassosConcluidos]` são avaliadas após o evento e controlam se a transição é permitida.
+- Ações de `entry` e `exit` (ex.: `iniciarContador()`, `pararContador()`) representam atividades internas realizadas ao entrar/saír de um estado.
+- Esse diagrama pode ser usado para derivar casos de teste (por exemplo: iniciar -> concluir passos -> arquivar) e para validar regras de negócio (RN01, RN06).
+
+## 11. Diagrama de Atividades — RF2: Criar Tarefa
+
+O diagrama de atividades a seguir descreve o fluxo completo do requisito funcional RF2 (Criar Tarefa). Ele representa decisões (nó de decisão), laços (adicionar múltiplos passos), validação e caminhos de erro, além do fluxo de sucesso que persiste a tarefa e atualiza a interface.
+
+Elementos presentes:
+
+- Nó inicial e final
+- Ações (abrir formulário, preencher campos, salvar)
+- Decisão (validação do título, validação do servidor)
+- Laço/ fluxo repetitivo para adicionar passos
+
+Diagrama (Mermaid - Activity / Flowchart):
+
+```mermaid
+flowchart TD
+  Start([Início]) --> Open[Abrir formulário "Nova Tarefa"]
+  Open --> FillTitle[Preencher título]
+  FillTitle --> TitleValid{Título preenchido?}
+  TitleValid -- Não --> ShowError[Exibir erro "Título obrigatório"]
+  ShowError --> FillTitle
+  TitleValid -- Sim --> OptDesc[Adicionar descrição (opcional)]
+  OptDesc --> SelectType[Selecionar ou criar tipo]
+  SelectType --> AddStepDecision{Adicionar passo?}
+  AddStepDecision -- Sim --> AddStep[Adicionar um passo]
+  AddStep --> AddStepDecision
+  AddStepDecision -- Não --> SetStatus[Definir status (A Fazer / Feito)]
+  SetStatus --> Save[Salvar]
+  Save --> ClientValidate[Validação client-side]
+  ClientValidate --> ClientOk{Validação OK?}
+  ClientOk -- Não --> ShowClientErrors[Exibir erros no formulário]
+  ShowClientErrors --> FillTitle
+  ClientOk -- Sim --> ServerPersist[Enviar para servidor / Persistir]
+  ServerPersist --> ServerOk{Persistência OK?}
+  ServerOk -- Não --> ShowServerError[Exibir erro de servidor (tentar novamente)]
+  ShowServerError --> Save
+  ServerOk -- Sim --> UpdateUI[Atualizar UI (exibir post-it na lista)]
+  UpdateUI --> End([Fim])
+
+  %% Observação: o laço AddStepDecision permite adicionar 0..N passos.
+```
