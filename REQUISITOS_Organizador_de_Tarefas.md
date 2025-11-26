@@ -87,6 +87,7 @@ Diagrama de Casos de Uso (Mermaid):
 
 ```mermaid
 %% Diagrama de Casos de Uso - Organizador de Tarefas
+usecaseDiagram
 actor Usuario
 
 Usuario --> (RF1 - Criar Categoria)
@@ -94,7 +95,7 @@ Usuario --> (RF2 - Criar Tarefa)
 Usuario --> (RF3 - Editar Tarefa)
 Usuario --> (RF4 - Excluir Tarefa)
 Usuario --> (RF5 - Concluir Passos)
-Usuario --> (RF6 — Concluir Tarefa)
+Usuario --> (RF6 - Concluir Tarefa)
 Usuario --> (RF7 - Exibir Tarefas Organizadas por Tipo e Status)
 Usuario --> (RF8 - Buscar/Filtrar Tarefas)
 ```
@@ -212,8 +213,8 @@ Diagrama (Mermaid - State Diagram):
 stateDiagram-v2
   [*] --> TODO
 
-  TODO --> IN_PROGRESS : iniciarTarefa / entry: registrarInicio()
-  IN_PROGRESS --> TODO : pausarTarefa / exit: registrarPausa()
+  TODO --> IN_PROGRESS : iniciarTarefa
+  IN_PROGRESS --> TODO : pausarTarefa / registrarPausa()
 
   IN_PROGRESS --> DONE : passoConcluido [todosPassosConcluidos] / marcarComoConcluida()
   TODO --> DONE : marcarComoFeita [semPassos] / marcarComoConcluida()
@@ -222,8 +223,8 @@ stateDiagram-v2
   ARCHIVED --> [*]
 
   state IN_PROGRESS {
-    entry: iniciarContador()
-    exit: pararContador()
+    entry / iniciarContador()
+    exit / pararContador()
   }
 
   %% Exemplo de transição com condição de guarda e ação
@@ -259,27 +260,27 @@ Diagrama (Mermaid - Activity / Flowchart):
 
 ```mermaid
 flowchart TD
-  Start([Início]) --> Open[Abrir formulário "Nova Tarefa"]
-  Open --> FillTitle[Preencher título]
-  FillTitle --> TitleValid{Título preenchido?}
-  TitleValid -- Não --> ShowError[Exibir erro "Título obrigatório"]
+  Start([Início]) --> Open["Abrir formulário: Nova Tarefa"]
+  Open --> FillTitle["Preencher título"]
+  FillTitle --> TitleValid{"Título preenchido?"}
+  TitleValid -- "Não" --> ShowError["Exibir erro: Título obrigatório"]
   ShowError --> FillTitle
-  TitleValid -- Sim --> OptDesc[Adicionar descrição (opcional)]
-  OptDesc --> SelectType[Selecionar ou criar tipo]
-  SelectType --> AddStepDecision{Adicionar passo?}
-  AddStepDecision -- Sim --> AddStep[Adicionar um passo]
+  TitleValid -- "Sim" --> OptDesc["Adicionar descrição (opcional)"]
+  OptDesc --> SelectType["Selecionar ou criar tipo"]
+  SelectType --> AddStepDecision{"Adicionar passo?"}
+  AddStepDecision -- "Sim" --> AddStep["Adicionar um passo"]
   AddStep --> AddStepDecision
-  AddStepDecision -- Não --> SetStatus[Definir status (A Fazer / Feito)]
-  SetStatus --> Save[Salvar]
-  Save --> ClientValidate[Validação client-side]
-  ClientValidate --> ClientOk{Validação OK?}
-  ClientOk -- Não --> ShowClientErrors[Exibir erros no formulário]
+  AddStepDecision -- "Não" --> SetStatus["Definir status (A Fazer / Feito)"]
+  SetStatus --> Save["Salvar"]
+  Save --> ClientValidate["Validação client-side"]
+  ClientValidate --> ClientOk{"Validação OK?"}
+  ClientOk -- "Não" --> ShowClientErrors["Exibir erros no formulário"]
   ShowClientErrors --> FillTitle
-  ClientOk -- Sim --> ServerPersist[Enviar para servidor / Persistir]
-  ServerPersist --> ServerOk{Persistência OK?}
-  ServerOk -- Não --> ShowServerError[Exibir erro de servidor (tentar novamente)]
+  ClientOk -- "Sim" --> ServerPersist["Enviar para servidor / Persistir"]
+  ServerPersist --> ServerOk{"Persistência OK?"}
+  ServerOk -- "Não" --> ShowServerError["Exibir erro de servidor (tentar novamente)"]
   ShowServerError --> Save
-  ServerOk -- Sim --> UpdateUI[Atualizar UI (exibir post-it na lista)]
+  ServerOk -- "Sim" --> UpdateUI["Atualizar UI (exibir post-it na lista)"]
   UpdateUI --> End([Fim])
 
   %% Observação: o laço AddStepDecision permite adicionar 0..N passos.
