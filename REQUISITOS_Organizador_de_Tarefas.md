@@ -95,9 +95,13 @@ flowchart TD
   Usuario --> UC4((RF4 - Excluir Tarefa))
   Usuario --> UC5((RF5 - Concluir Passos))
   Usuario --> UC6((RF6 - Concluir Tarefa))
-  Usuario --> UC7((RF7 - Exibir Tarefas Organizadas por Tipo e Status))
+  %% Os casos de uso abaixo são executados pelo sistema automaticamente
+  UC6((RF6 - Concluir Tarefa))
+  UC7((RF7 - Exibir Tarefas Organizadas por Tipo e Status))
   Usuario --> UC8((RF8 - Buscar/Filtrar Tarefas))
 ```
+
+Observação: Os casos de uso `RF6 - Concluir Tarefa` e `RF7 - Exibir Tarefas Organizadas por Tipo e Status` são processos que podem ser disparados pelo sistema (por exemplo, conclusão automática ao terminar todos os passos; atualização periódica/trigger de organização) e, portanto, não possuem um ator humano direto no diagrama.
 
 ## 8. Diagrama de Classes & Modelo de Dados
 
