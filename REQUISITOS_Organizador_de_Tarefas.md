@@ -94,7 +94,6 @@ flowchart TD
   Usuario --> UC3((RF3 - Editar Tarefa))
   Usuario --> UC4((RF4 - Excluir Tarefa))
   Usuario --> UC5((RF5 - Concluir Passos))
-  Usuario --> UC6((RF6 - Concluir Tarefa))
   %% Os casos de uso abaixo são executados pelo sistema automaticamente
   UC6((RF6 - Concluir Tarefa))
   UC7((RF7 - Exibir Tarefas Organizadas por Tipo e Status))
