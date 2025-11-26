@@ -87,17 +87,16 @@ Diagrama de Casos de Uso (Mermaid):
 
 ```mermaid
 %% Diagrama de Casos de Uso - Organizador de Tarefas
-usecaseDiagram
-actor Usuario
-
-Usuario --> (RF1 - Criar Categoria)
-Usuario --> (RF2 - Criar Tarefa)
-Usuario --> (RF3 - Editar Tarefa)
-Usuario --> (RF4 - Excluir Tarefa)
-Usuario --> (RF5 - Concluir Passos)
-Usuario --> (RF6 - Concluir Tarefa)
-Usuario --> (RF7 - Exibir Tarefas Organizadas por Tipo e Status)
-Usuario --> (RF8 - Buscar/Filtrar Tarefas)
+flowchart TD
+  Usuario[Usuário]
+  Usuario --> UC1((RF1 - Criar Categoria))
+  Usuario --> UC2((RF2 - Criar Tarefa))
+  Usuario --> UC3((RF3 - Editar Tarefa))
+  Usuario --> UC4((RF4 - Excluir Tarefa))
+  Usuario --> UC5((RF5 - Concluir Passos))
+  Usuario --> UC6((RF6 - Concluir Tarefa))
+  Usuario --> UC7((RF7 - Exibir Tarefas Organizadas por Tipo e Status))
+  Usuario --> UC8((RF8 - Buscar/Filtrar Tarefas))
 ```
 
 ## 8. Diagrama de Classes & Modelo de Dados
