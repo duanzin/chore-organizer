@@ -284,3 +284,101 @@ flowchart TD
 
   %% Observação: o laço AddStepDecision permite adicionar 0..N passos.
 ```
+
+## 12. Diagramas de Sequência
+
+Diagrama 1 — RF2: Criar Tarefa
+
+Descrição: sequência desde o usuário abrindo o formulário até o servidor persistir a tarefa com seus passos e retornar confirmação.
+
+```mermaid
+sequenceDiagram
+  participant Usuario as Usuário
+  participant UI as UI_Formulario (Visão)
+  participant TaskService as TaskService (Controller/API)
+  participant Task as Task (Modelo)
+  participant TaskStep as TaskStep (Modelo)
+
+  Usuario->>UI: abrirForm()
+  Usuario->>UI: preencher(título, descrição, tipo)
+  loop para cada passo
+    Usuario->>UI: adicionarPasso(text)
+  end
+  Usuario->>UI: clicarSalvar()
+  UI->>TaskService: POST /tasks {payload}
+  TaskService->>Task: criarTask(data)
+  alt existem passos
+    loop criar passos
+      Task->>TaskStep: criarStep(text)
+    end
+  end
+  TaskService-->>UI: 201 Created (task)
+  UI-->>Usuario: mostrarConfirmação()
+```
+
+Diagrama 2 — RF4: Editar Tarefa / Gerenciar Passos
+
+Descrição: sequência para editar título, adicionar/editar/remover passos e persistir alterações.
+
+```mermaid
+sequenceDiagram
+  participant Usuario as Usuário
+  participant UI as UI_DetalheTarefa (Visão)
+  participant TaskService as TaskService (Controller/API)
+  participant Task as Task (Modelo)
+  participant TaskStep as TaskStep (Modelo)
+
+  Usuario->>UI: abrirDetalhe(taskId)
+  UI->>TaskService: GET /tasks/{id}
+  TaskService->>Task: buscarTask(id)
+  TaskService-->>UI: task(completa)
+  Usuario->>UI: editarTitulo(novoTitulo)
+  Usuario->>UI: adicionarPasso(text)
+  UI->>TaskService: PATCH /tasks/{id} {titulo, passos}
+  TaskService->>Task: atualizarTitulo(novoTitulo)
+  alt passo novo
+    TaskService->>TaskStep: criarStep(text)
+  end
+  alt passo editado
+    TaskService->>TaskStep: atualizarStep(stepId, text)
+  end
+  alt passo removido
+    TaskService->>TaskStep: deletarStep(stepId)
+  end
+  TaskService-->>UI: 200 OK (taskAtualizada)
+  UI-->>Usuario: atualizarVisao()
+```
+
+Diagrama 3 — RF7: Exibir Tarefas Organizadas por Tipo e Status
+
+Descrição: sequência para exibir o quadro principal organizado por tipos (categorias) e, dentro de cada tipo, por status (A Fazer / Feito). O diagrama mostra a solicitação da visão à API, a agregação no serviço e o retorno das tarefas agrupadas.
+
+```mermaid
+sequenceDiagram
+  participant Usuario as Usuário
+  participant UI as UI_Quadro (Visão)
+  participant TaskService as TaskService (Controller/API)
+  participant Type as Type (Modelo)
+  participant Task as Task (Modelo)
+
+  Usuario->>UI: abrirQuadro()
+  UI->>TaskService: GET /tasks?groupBy=type&includeSteps=true
+  TaskService->>Type: listarTipos()
+  TaskService->>Task: buscarTasksAgrupadasPorTipo()
+  TaskService-->>UI: 200 OK {types: [{typeId, name, tasks: [...]}, ...]}
+  UI-->>Usuario: renderizarQuadro(types + tasks)
+  Note over UI: para cada tipo, criar colunas de status e renderizar post-its
+
+  alt usuário aplica filtro
+    Usuario->>UI: aplicarFiltro(status/type)
+    UI->>TaskService: GET /tasks?type=...&status=...
+    TaskService-->>UI: 200 OK (tasksFiltradas)
+    UI-->>Usuario: atualizarVisao()
+  end
+```
+
+Notas sobre os diagramas:
+
+- Cada diagrama inclui o ator `Usuário`, a camada de visão (`UI_*`) e a camada de modelo (`Task`, `TaskStep`).
+- `TaskService` representa a camada de controle/serviço (endpoints REST). Ele orquestra operações sobre entidades.
+- Os loops sinalizam criação iterativa de passos; condições (alt) tratam ramificações de comportamento.
