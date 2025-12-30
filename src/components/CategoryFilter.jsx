@@ -17,7 +17,7 @@ export function CategoryFilter({
         type="multiple"
         value={selectedCategories}
         onValueChange={onSelectedCategoriesChange}
-        className="justify-start"
+        className="justify-start gap-1"
       >
         {categories.map((category) => (
           <ToggleGroupItem
