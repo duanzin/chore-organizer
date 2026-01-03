@@ -386,19 +386,19 @@ Visão por componentes:
 
 ```mermaid
 flowchart TD
-  subgraph Client[Front-end (React + Vite)]
-    UI[UI shadcn/ui + Tailwind]
-    Hooks[Estado local: tasks, categories]
+  subgraph Client["Front-end: React + Vite"]
+    UI["UI: shadcn/ui + Tailwind"]
+    Hooks["Estado local: tasks, categories"]
   end
 
-  subgraph Server[Back-end (Planejado)]
-    API[REST Controllers]
-    Domain[Domínio / serviços]
-    Prisma[Prisma ORM]
+  subgraph Server["Back-end - Planejado"]
+    API["REST Controllers"]
+    Domain["Domínio / serviços"]
+    Prisma["Prisma ORM"]
   end
 
-  subgraph DB[Banco de Dados (Planejado)]
-    PG[(PostgreSQL/SQLite)]
+  subgraph DB["Banco de Dados - Planejado"]
+    PG["PostgreSQL/SQLite"]
   end
 
   UI --> Hooks
