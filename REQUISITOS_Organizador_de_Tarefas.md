@@ -9,7 +9,7 @@ Autor: Lucas Duan Rodrigues
 - Nome do produto: Organizador de Tarefas
 - Autoria: Projeto solo (desenvolvedor único)
 - Público-alvo: Pessoas em geral que buscam uma forma simples e visual de organizar e acompanhar tarefas do dia-a-dia (tarefas domésticas, limpeza, compras, projetos pessoais, etc.)
-- Plataforma alvo: Web (front-end em Vite + React; back-end em TypeScript + Prisma; banco de dados: PostgreSQL em produção ou SQLite para desenvolvimento/local)
+- Plataforma alvo: Web. Versão atual: somente front-end (Vite + React) com estado em memória.
 
 ## 2. Missão do Produto
 
@@ -55,11 +55,11 @@ RF1 — Criar Categoria
 
 RF2 — Criar Tarefa
 
-- Descrição: Usuário cria uma tarefa, definindo nome principal (título), descrição opcional, tipo (categoria) e passos (lista de subitens). Pode definir status inicial (A Fazer / Feito), e caso não o faça, ficará como A fazer até todos os passos serem concluídos.
+- Descrição: Usuário cria uma tarefa, definindo nome principal (título), descrição opcional, tipo (categoria) e passos (lista de subitens).
 
 RF3 — Editar Tarefa
 
-- Descrição: Usuário modifica título, descrição, tipo e passos de uma tarefa existente.
+- Descrição: Usuário modifica passos de uma tarefa existente.
 
 RF4 — Excluir Tarefa
 
@@ -75,11 +75,11 @@ RF6 — Concluir Tarefa
 
 RF7 — Exibir Tarefas Organizadas por Tipo e Status
 
-- Descrição: Visualização organiza tarefas por tipo, e dentro de cada tipo sub-organiza por status (A Fazer / Feito).
+- Descrição: Visualização organiza tarefas por categoria.
 
-RF8 — Buscar/Filtrar Tarefas
+RF8 — Filtrar Tarefas
 
-- Descrição: Usuário pesquisa por tarefas por título ou as filtra por tipo e status.
+- Descrição: Usuário filtra tarefas por categoria.
 
 ## 7. Casos de Uso
 
@@ -94,13 +94,13 @@ flowchart TD
   Usuario --> UC3((RF3 - Editar Tarefa))
   Usuario --> UC4((RF4 - Excluir Tarefa))
   Usuario --> UC5((RF5 - Concluir Passos))
+  Usuario --> UC8((RF8 - Filtrar Tarefas))
   %% Os casos de uso abaixo são executados pelo sistema automaticamente
   UC6((RF6 - Concluir Tarefa))
-  UC7((RF7 - Exibir Tarefas Organizadas por Tipo e Status))
-  Usuario --> UC8((RF8 - Buscar/Filtrar Tarefas))
+  UC7((RF7 - Exibir Tarefas Organizadas por Categoria))
 ```
 
-Observação: Os casos de uso `RF6 - Concluir Tarefa` e `RF7 - Exibir Tarefas Organizadas por Tipo e Status` são processos que podem ser disparados pelo sistema (por exemplo, conclusão automática ao terminar todos os passos; atualização periódica/trigger de organização) e, portanto, não possuem um ator humano direto no diagrama.
+Observação: Os casos de uso `RF6 - Concluir Tarefa` e `RF7 - Exibir Tarefas Organizadas por Categoria` são processos que podem ser disparados pelo sistema e, portanto, não possuem um ator humano direto no diagrama.
 
 ## 8. Diagrama de Classes & Modelo de Dados
 
@@ -382,31 +382,27 @@ sequenceDiagram
 
 ## 13. Arquitetura de Software
 
-Arquitetura em camadas para uma aplicação web single-user, com front-end React (Vite) consumindo API REST em Node.js/TypeScript e persistência em PostgreSQL/SQLite via Prisma. A autenticação é implícita (uso local); não há multiusuário nem ACL.
-
-Visão por componentes (Mermaid):
+Visão por componentes:
 
 ```mermaid
 flowchart TD
   subgraph Client[Front-end (React + Vite)]
     UI[UI shadcn/ui + Tailwind]
-    Hooks[Hooks de estado (tasks, categories)]
-    Services[Client API service]
+    Hooks[Estado local: tasks, categories]
   end
 
-  subgraph Server[Back-end (Node/TS)]
-    API[REST Controllers / TaskService]
-    Domain[Domínio: Task, Category, TaskStep]
+  subgraph Server[Back-end (Planejado)]
+    API[REST Controllers]
+    Domain[Domínio / serviços]
     Prisma[Prisma ORM]
   end
 
-  subgraph DB[Banco de Dados]
+  subgraph DB[Banco de Dados (Planejado)]
     PG[(PostgreSQL/SQLite)]
   end
 
   UI --> Hooks
-  Hooks --> Services
-  Services --> API
+  Hooks -.-> API
   API --> Domain
   Domain --> Prisma
   Prisma --> PG
