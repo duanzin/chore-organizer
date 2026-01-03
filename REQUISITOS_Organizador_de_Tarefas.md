@@ -380,8 +380,70 @@ sequenceDiagram
   end
 ```
 
-Notas sobre os diagramas:
+## 13. Arquitetura de Software
 
-- Cada diagrama inclui o ator `Usuário`, a camada de visão (`UI_*`) e a camada de modelo (`Task`, `TaskStep`).
-- `TaskService` representa a camada de controle/serviço (endpoints REST). Ele orquestra operações sobre entidades.
-- Os loops sinalizam criação iterativa de passos; condições (alt) tratam ramificações de comportamento.
+Arquitetura em camadas para uma aplicação web single-user, com front-end React (Vite) consumindo API REST em Node.js/TypeScript e persistência em PostgreSQL/SQLite via Prisma. A autenticação é implícita (uso local); não há multiusuário nem ACL.
+
+Visão por componentes (Mermaid):
+
+```mermaid
+flowchart TD
+  subgraph Client[Front-end (React + Vite)]
+    UI[UI shadcn/ui + Tailwind]
+    Hooks[Hooks de estado (tasks, categories)]
+    Services[Client API service]
+  end
+
+  subgraph Server[Back-end (Node/TS)]
+    API[REST Controllers / TaskService]
+    Domain[Domínio: Task, Category, TaskStep]
+    Prisma[Prisma ORM]
+  end
+
+  subgraph DB[Banco de Dados]
+    PG[(PostgreSQL/SQLite)]
+  end
+
+  UI --> Hooks
+  Hooks --> Services
+  Services --> API
+  API --> Domain
+  Domain --> Prisma
+  Prisma --> PG
+```
+
+## 14. Modelo Entidade-Relacionamento (E-R)
+
+### Entidades e Atributos
+
+1. **Categoria**
+
+- **id** (PK, UUID)
+- **nome** (varchar 120, NOT NULL, UNIQUE)
+- **cor_hex** (char(7), NOT NULL, formato `#rrggbb`)
+- criado_em (timestamp, default now)
+- atualizado_em (timestamp, default now on update)
+
+2. **Tarefa**
+
+- **id** (PK, UUID)
+- **categoria_id** (FK → Categoria.id, NOT NULL)
+- **titulo** (varchar 200, NOT NULL)
+- descricao (text, NULL)
+- status (enum: TODO, IN_PROGRESS, DONE, default TODO)
+- criado_em (timestamp, default now)
+- atualizado_em (timestamp, default now on update)
+
+3. **Passo**
+
+- **id** (PK, UUID)
+- **tarefa_id** (FK → Tarefa.id, NOT NULL)
+- **texto** (varchar 255, NOT NULL)
+- concluido (boolean, default false)
+- criado_em (timestamp, default now)
+- atualizado_em (timestamp, default now on update)
+
+### Relacionamentos e Cardinalidades
+
+- Categoria 1 --- N Tarefa (toda tarefa pertence a uma categoria; exclusão de categoria pode ser restrita ou em cascata conforme política).
+- Tarefa 1 --- N Passo (todo passo pertence a uma tarefa; exclusão de tarefa remove passos).
