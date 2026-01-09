@@ -9,7 +9,7 @@ Autor: Lucas Duan Rodrigues
 - Nome do produto: Organizador de Tarefas
 - Autoria: Projeto solo (desenvolvedor único)
 - Público-alvo: Pessoas em geral que buscam uma forma simples e visual de organizar e acompanhar tarefas do dia-a-dia (tarefas domésticas, limpeza, compras, projetos pessoais, etc.)
-- Plataforma alvo: Web. Versão atual: somente front-end (Vite + React) com estado em memória.
+- Plataforma alvo: Web. Back-end implementado com Node.js + Express + Prisma + SQLite. Front-end: Vite + React.
 
 ## 2. Missão do Produto
 
@@ -108,76 +108,85 @@ Entidades principais:
 
 1. Task (Tarefa)
 
-- id: UUID
+- id: string (CUID, chave primária)
 - title: string (obrigatório)
 - description: string (opcional)
-- status: enum {TODO, DONE}
-- typeId: FK -> Type (opcional)
-- createdAt: datetime
-- updatedAt: datetime
+- status: string (padrão: "TODO", valores: "TODO", "DONE")
+- typeId: string (FK -> Type, opcional, SetNull ao deletar tipo)
+- createdAt: datetime (padrão: now)
+- updatedAt: datetime (auto-atualizado)
 
 2. TaskStep (Passo)
 
-- id: UUID
-- taskId: FK -> Task
+- id: string (CUID, chave primária)
+- taskId: string (FK -> Task, obrigatório, Cascade ao deletar tarefa)
 - text: string (obrigatório)
-- done: boolean
-- createdAt, updatedAt
+- done: boolean (padrão: false)
+- createdAt: datetime (padrão: now)
+- updatedAt: datetime (auto-atualizado)
 
 3. Type (Tipo/Categoria)
 
-- id: UUID
-- name: string (único por usuário/instância)
-- color?: string (opcional, para UI)
-- createdAt, updatedAt
+- id: string (CUID, chave primária)
+- name: string (único globalmente)
+- color: string (opcional, para UI)
+- createdAt: datetime (padrão: now)
+- updatedAt: datetime (auto-atualizado)
 
 Relacionamentos:
 
 - Task 1..N TaskStep
-- Task optional -> Type (N tasks por type)
+- Task optional -> Type (N tasks por type, SetNull ao deletar)
 
-Esboço de schema Prisma (exemplo):
+Schema Prisma (implementado):
 
 ```prisma
-model Task {
-  id          String     @id @default(uuid())
-  title       String
-  description String?
-  status      TaskStatus @default(TODO)
-  typeId      String?
-  type        Type?  @relation(fields: [typeId], references: [id])
-  steps       TaskStep[]
-  createdAt   DateTime   @default(now())
-  updatedAt   DateTime   @updatedAt
-}
-
-model TaskStep {
-  id        String   @id @default(uuid())
-  task      Task     @relation(fields: [taskId], references: [id])
-  taskId    String
-  text      String
-  done      Boolean  @default(false)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-}
-
 model Type {
-  id        String   @id @default(uuid())
-  name      String
+  id        String   @id @default(cuid())
+  name      String   @unique
   color     String?
   tasks     Task[]
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  @@unique([name])
+  @@map("types")
 }
 
-enum TaskStatus {
-  TODO
-  IN_PROGRESS
-  DONE
+model Task {
+  id          String     @id @default(cuid())
+  title       String
+  description String?
+  status      String     @default("TODO")
+  typeId      String?
+  type        Type?      @relation(fields: [typeId], references: [id], onDelete: SetNull)
+  steps       TaskStep[]
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+
+  @@map("tasks")
+}
+
+model TaskStep {
+  id        String   @id @default(cuid())
+  task      Task     @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  taskId    String
+  text      String
+  done      Boolean  @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("task_steps")
 }
 ```
+
+**Observações sobre a implementação:**
+
+- IDs utilizam CUID em vez de UUID
+- Status é string em vez de enum (armazenado como "TODO" ou "DONE")
+- Banco de dados SQLite para desenvolvimento (configurável via `.env`)
+- Mapeamento de tabelas customizado (`@@map`)
+- Relacionamento Task -> Type com `onDelete: SetNull` (tarefa fica sem categoria se categoria for deletada)
+- Relacionamento Task -> TaskStep com `onDelete: Cascade` (passos são deletados quando tarefa é deletada)
 
 ## 9. Requisitos Não-Funcionais (RNF)
 
@@ -199,15 +208,13 @@ RNF4 — Acessibilidade
 
 ## 10. Diagrama de Transição de Estados — `Task` (Tarefa)
 
-O diagrama abaixo descreve o ciclo de vida de um objeto `Task` em resposta a eventos do sistema e ações do usuário. O atributo de interesse é `status`, que possui múltiplos estados possíveis e determina o comportamento do objeto.
+O diagrama abaixo descreve o ciclo de vida de um objeto `Task` em resposta a eventos do sistema e ações do usuário. O atributo de interesse é `status`, que possui dois estados possíveis e determina o comportamento do objeto.
 
 Descrição rápida:
 
 - Estado inicial: tarefa criada entra no estado `TODO`.
-- Estados principais: `TODO`, `IN_PROGRESS`, `DONE`, `ARCHIVED`.
-- Estado final/arquivado: `ARCHIVED` representa que a tarefa foi retirada do fluxo ativo.
-
-Transições incluem eventos, condições de guarda e ações realizadas na transição.
+- Estados principais: `TODO`, `DONE`.
+- Transição: usuário marca todos os passos como concluídos → tarefa transiciona para `DONE`.
 
 Diagrama (Mermaid - State Diagram):
 
@@ -215,37 +222,21 @@ Diagrama (Mermaid - State Diagram):
 stateDiagram-v2
   [*] --> TODO
 
-  TODO --> IN_PROGRESS : iniciarTarefa
-  IN_PROGRESS --> TODO : pausarTarefa / registrarPausa()
+  TODO --> DONE : marcarComoConcluida [todosPassosConcluidos ou semPassos]
+  DONE --> TODO : reabrirTarefa
 
-  IN_PROGRESS --> DONE : passoConcluido [todosPassosConcluidos] / marcarComoConcluida()
-  TODO --> DONE : marcarComoFeita [semPassos] / marcarComoConcluida()
-
-  DONE --> ARCHIVED : arquivar / removerDaLista()
-  ARCHIVED --> [*]
-
-  state IN_PROGRESS {
-    entry / iniciarContador()
-    exit / pararContador()
-  }
-
-  %% Exemplo de transição com condição de guarda e ação
-  %% evento [condição] / ação
+  DONE --> [*]
 ```
 
 Explicações:
 
-- `iniciarTarefa`: evento disparado quando o usuário inicia o trabalho na tarefa; executa `registrarInicio()` como ação de entrada.
-- `pausarTarefa`: permite voltar de `IN_PROGRESS` para `TODO` (por exemplo, suspender a execução).
-- `passoConcluido`: evento que ocorre quando um passo da tarefa é marcado como concluído; a transição para `DONE` só ocorre se a condição `[todosPassosConcluidos]` for verdadeira.
-- `marcarComoFeita`: evento direto para marcar uma tarefa como concluída se ela não possui passos.
-- `arquivar`: move a tarefa para `ARCHIVED`, pondo-a fora do fluxo ativo; `ARCHIVED` é tratado como um estado final/terminal.
+- `marcarComoConcluida`: evento disparado quando todos os passos de uma tarefa são marcados como concluídos, ou quando uma tarefa sem passos é marcada como feita.
+- `reabrirTarefa`: permite voltar de `DONE` para `TODO` se o usuário desejar.
+- Condição `[todosPassosConcluidos ou semPassos]`: a transição para `DONE` só ocorre se todos os passos estão concluídos ou se a tarefa não possui passos.
 
-Observações sobre guardas e ações:
+**Nota sobre implementação simplificada:**
 
-- Guardas como `[todosPassosConcluidos]` são avaliadas após o evento e controlam se a transição é permitida.
-- Ações de `entry` e `exit` (ex.: `iniciarContador()`, `pararContador()`) representam atividades internas realizadas ao entrar/saír de um estado.
-- Esse diagrama pode ser usado para derivar casos de teste (por exemplo: iniciar -> concluir passos -> arquivar) e para validar regras de negócio (RN01, RN06).
+A implementação atual possui apenas dois estados (`TODO` e `DONE`) em vez dos três estados planejados (`TODO`, `IN_PROGRESS`, `DONE`). O estado `IN_PROGRESS` foi removido para simplificar o fluxo inicial, podendo ser adicionado em versões futuras se necessário.
 
 ## 11. Diagrama de Atividades — RF2: Criar Tarefa
 
@@ -388,58 +379,83 @@ Visão por componentes:
 flowchart TD
   subgraph Client["Front-end: React + Vite"]
     UI["UI: shadcn/ui + Tailwind"]
-    Hooks["Estado local: tasks, categories"]
+    Hooks["Hooks: useCategories, useTasks"]
+    API_Client["API Client: lib/api.js"]
   end
 
-  subgraph Server["Back-end - Planejado"]
-    API["REST Controllers"]
-    Domain["Domínio / serviços"]
+  subgraph Server["Back-end: Node.js + Express"]
+    Router["Routes: /categories, /tasks"]
+    Controller["Controllers"]
+    Service["Services: tasksService, categoriesService"]
+    Model["Models: taskModel, categoryModel"]
     Prisma["Prisma ORM"]
   end
 
-  subgraph DB["Banco de Dados - Planejado"]
-    PG["PostgreSQL/SQLite"]
+  subgraph DB["Banco de Dados"]
+    SQLite["SQLite (dev)"]
   end
 
   UI --> Hooks
-  Hooks -.-> API
-  API --> Domain
-  Domain --> Prisma
-  Prisma --> PG
+  Hooks --> API_Client
+  API_Client --> Router
+  Router --> Controller
+  Controller --> Service
+  Service --> Model
+  Model --> Prisma
+  Prisma --> SQLite
 ```
+
+**Stack Implementado:**
+
+- **Back-end:** Node.js + Express.js
+- **ORM:** Prisma (v5+)
+- **Banco de dados:** SQLite (desenvolvimento)
+- **Autenticação:** Nenhuma (usuário único)
+- **Validação:** Server-side via services
+- **API:** REST com endpoints CRUD para tarefas, categorias e passos
 
 ## 14. Modelo Entidade-Relacionamento (E-R)
 
 ### Entidades e Atributos
 
-1. **Categoria**
+1. **Type (Categoria)**
 
-- **id** (PK, UUID)
-- **nome** (varchar 120, NOT NULL, UNIQUE)
-- **cor_hex** (char(7), NOT NULL, formato `#rrggbb`)
-- criado_em (timestamp, default now)
-- atualizado_em (timestamp, default now on update)
+- **id** (PK, CUID)
+- **name** (string, NOT NULL, UNIQUE)
+- **color** (string, opcional, para UI)
+- createdAt (timestamp, default now)
+- updatedAt (timestamp, auto-atualizado)
 
-2. **Tarefa**
+2. **Task (Tarefa)**
 
-- **id** (PK, UUID)
-- **categoria_id** (FK → Categoria.id, NOT NULL)
-- **titulo** (varchar 200, NOT NULL)
-- descricao (text, NULL)
-- status (enum: TODO, IN_PROGRESS, DONE, default TODO)
-- criado_em (timestamp, default now)
-- atualizado_em (timestamp, default now on update)
+- **id** (PK, CUID)
+- **title** (string, NOT NULL)
+- **description** (string, opcional)
+- **status** (string, default "TODO", valores: "TODO", "DONE")
+- **typeId** (FK → Type.id, opcional, SetNull ao deletar categoria)
+- createdAt (timestamp, default now)
+- updatedAt (timestamp, auto-atualizado)
 
-3. **Passo**
+3. **TaskStep (Passo)**
 
-- **id** (PK, UUID)
-- **tarefa_id** (FK → Tarefa.id, NOT NULL)
-- **texto** (varchar 255, NOT NULL)
-- concluido (boolean, default false)
-- criado_em (timestamp, default now)
-- atualizado_em (timestamp, default now on update)
+- **id** (PK, CUID)
+- **taskId** (FK → Task.id, NOT NULL, Cascade ao deletar tarefa)
+- **text** (string, NOT NULL)
+- **done** (boolean, default false)
+- createdAt (timestamp, default now)
+- updatedAt (timestamp, auto-atualizado)
 
 ### Relacionamentos e Cardinalidades
 
-- Categoria 1 --- N Tarefa (toda tarefa pertence a uma categoria; exclusão de categoria pode ser restrita ou em cascata conforme política).
-- Tarefa 1 --- N Passo (todo passo pertence a uma tarefa; exclusão de tarefa remove passos).
+- Type 1 --- N Task (toda tarefa pertence a uma categoria; exclusão de categoria deixa tarefa sem categoria via SetNull).
+- Task 1 --- N TaskStep (todo passo pertence a uma tarefa; exclusão de tarefa remove passos via Cascade).
+
+### Mapeamento de Tabelas
+
+- Type → tabela `types`
+- Task → tabela `tasks`
+- TaskStep → tabela `task_steps`
+
+```
+
+```
