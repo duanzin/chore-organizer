@@ -16,6 +16,7 @@ function App() {
     addStep,
     removeStep,
     updateStep,
+    isOnline: isTasksOnline,
   } = useTasks();
 
   const {
@@ -23,7 +24,10 @@ function App() {
     selectedCategories,
     setSelectedCategories,
     createCategory,
+    isOnline: isCategoriesOnline,
   } = useCategories();
+
+  const isOnline = isCategoriesOnline && isTasksOnline;
 
   const categoryMap = useMemo(
     () => Object.fromEntries(categories.map((cat) => [cat.id, cat])),
@@ -46,6 +50,14 @@ function App() {
 
   return (
     <div className="min-h-screen bg-linear-to-br from-slate-50 to-slate-100 p-6">
+      {!isOnline && (
+        <div className="max-w-6xl mx-auto mb-4 p-3 bg-amber-100 border border-amber-300 rounded-md">
+          <p className="text-sm text-amber-800 font-medium">
+            ⚠️ Modo offline: sem conexão com o servidor. As alterações serão
+            sincronizadas quando a conexão for restaurada.
+          </p>
+        </div>
+      )}
       <div className="max-w-6xl mx-auto">
         <div className="mb-8">
           <h1 className="text-4xl font-bold text-slate-900 mb-2">

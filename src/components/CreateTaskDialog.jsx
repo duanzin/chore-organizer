@@ -17,6 +17,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { generateId } from "@/lib/utils";
 
 export function CreateTaskDialog({ categories, onCreateTask }) {
   const [open, setOpen] = useState(false);
@@ -28,7 +29,7 @@ export function CreateTaskDialog({ categories, onCreateTask }) {
 
   const handleAddStep = () => {
     if (currentStep.trim()) {
-      setSteps([...steps, { id: Date.now().toString(), text: currentStep }]);
+      setSteps([...steps, { id: generateId(), text: currentStep }]);
       setCurrentStep("");
     }
   };
@@ -40,7 +41,7 @@ export function CreateTaskDialog({ categories, onCreateTask }) {
   const handleCreateTask = () => {
     if (title.trim() && selectedCategory) {
       onCreateTask({
-        id: Date.now().toString(),
+        id: generateId(),
         title,
         description,
         typeId: selectedCategory,
@@ -99,9 +100,16 @@ export function CreateTaskDialog({ categories, onCreateTask }) {
             <Select
               value={selectedCategory}
               onValueChange={setSelectedCategory}
+              disabled={categories.length === 0}
             >
               <SelectTrigger id="task-category">
-                <SelectValue placeholder="Selecione uma categoria" />
+                <SelectValue
+                  placeholder={
+                    categories.length === 0
+                      ? "Aguarde: carregando categorias"
+                      : "Selecione uma categoria"
+                  }
+                />
               </SelectTrigger>
               <SelectContent>
                 {categories.map((cat) => (
@@ -170,7 +178,9 @@ export function CreateTaskDialog({ categories, onCreateTask }) {
             </Button>
             <Button
               onClick={handleCreateTask}
-              disabled={!title.trim() || !selectedCategory}
+              disabled={
+                !title.trim() || !selectedCategory || categories.length === 0
+              }
             >
               Criar Tarefa
             </Button>
